@@ -2,7 +2,7 @@
 class Database {
     
     private $host = '127.0.0.1';
-    private $db_name = 'Hotel';
+    private $db_name = 'HotelRoom';
     private $username = 'root';
     private $password = '123456';
     private $port = '3307'; 

@@ -17,20 +17,17 @@ if (count($parts) > 1 && $parts[0] === 'RoomManager') {
     
     // Tải file API tương ứng
     switch ($model) {
-        case 'khachhang':
-            require_once __DIR__ . '/routers/api.php';
-            // Tạo các API cho Khách Hàng
+        case 'canbo':
+            require_once __DIR__ . '/routers/CanBoApi.php';
+          
             break;
 
         case 'phong':
-            require_once __DIR__ . '/routers/api.php';
-            // Tạo các API cho Phòng
+            require_once __DIR__ . '/routers/PhongApi.php';
+          
             break;
-
-        case 'datphong':
-            require_once __DIR__ . '/routers/api.php';
-            // Tạo các API cho Đặt Phòng
-            break;
+     
+         
 
         default:
             http_response_code(404);
