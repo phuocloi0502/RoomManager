@@ -1,6 +1,8 @@
 <?php
 // Thiết lập chế độ hiển thị lỗi (chỉ cho môi trường phát triển)
 error_reporting(E_ALL);
+error_log("Request URI: " . $_SERVER['REQUEST_URI']);
+
 ini_set('display_errors', 1);
 
 // Lấy phần URL để điều hướng
@@ -19,11 +21,13 @@ if (count($parts) > 1 && $parts[0] === 'RoomManager') {
     switch ($model) {
         case 'canbo':
             require_once __DIR__ . '/routers/CanBoApi.php';
+            require_once __DIR__ . '/routers/HinhAnhCanBoApi.php';
           
             break;
 
         case 'phong':
             require_once __DIR__ . '/routers/PhongApi.php';
+            require_once __DIR__ . '/routers/HinhAnhPhongApi.php';
           
             break;
      

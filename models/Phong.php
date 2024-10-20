@@ -60,21 +60,27 @@ public function getHinhAnhPhong($phong_id) {
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_COLUMN); // Lấy tất cả hình ảnh dưới dạng mảng
 }
-public function getOrCreateCanBo($ten_can_bo, $ngay_den, $ngay_di) {
-    // Kiểm tra xem cán bộ đã tồn tại không
-    $sql = "SELECT * FROM can_bo WHERE ten_can_bo = :ten_can_bo LIMIT 1";
+public function checkCanBoExists($ten_can_bo) {
+    // Tìm kiếm cán bộ theo tên
+    $sql = "
+        SELECT cb.*, ha.url AS avatar_url 
+        FROM can_bo cb
+        LEFT JOIN hinh_anh_can_bo ha ON cb.id = ha.canbo_id
+        WHERE cb.ten_can_bo LIKE :ten_can_bo
+    ";
     $stmt = $this->conn->prepare($sql);
-    $stmt->bindParam(':ten_can_bo', $ten_can_bo);
+    $ten_can_bo = "%$ten_can_bo%";
+    $stmt->bindParam(':ten_can_bo', $ten_can_bo, PDO::PARAM_STR);
     $stmt->execute();
     
-    $canbo = $stmt->fetch(PDO::FETCH_ASSOC); // Lấy thông tin cán bộ
+    // Trả về danh sách cán bộ trùng tên
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
-    // Nếu cán bộ đã tồn tại, trả về id của cán bộ
-    if ($canbo) {
-        return $canbo['id'];
-    }
 
-    // Nếu không, thêm mới cán bộ
+
+public function CreateCanBo($ten_can_bo, $ngay_den, $ngay_di) {
+
     $sql = "INSERT INTO can_bo (ten_can_bo, ngay_den, ngay_di) VALUES (:ten_can_bo, :ngay_den, :ngay_di)";
     $stmt = $this->conn->prepare($sql);
     $stmt->bindParam(':ten_can_bo', $ten_can_bo);
@@ -92,30 +98,100 @@ public function updatePhong($room_id, $canbo_id) {
     $stmt->bindParam(':room_id', $room_id);
     return $stmt->execute(); // Trả về true nếu thành công
 }
-public function themHoacCapNhatCanBoVaPhong($room_id, $ten_can_bo, $ngay_den, $ngay_di) {
-    // Lấy hoặc thêm mới cán bộ
-    $canbo_id = $this->getOrCreateCanBo($ten_can_bo, $ngay_den, $ngay_di);
-    
-    // Cập nhật thông tin phòng
-if ($this->updatePhong($room_id, $canbo_id)) {
-    return array(
-        "message" => "Cập nhật thông tin phòng thành công!",
-        "canbo_id" => $canbo_id // Trả về ID cán bộ
-    );
-} else {
-    return array("message" => "Có lỗi khi cập nhật thông tin phòng.");
-}
+
+public function updateCanBo($id, $ten_can_bo, $ngay_den, $ngay_di) {
+    // Kiểm tra ID cán bộ hợp lệ
+    if (empty($id) || !is_numeric($id)) {
+        return array("message" => "ID cán bộ không hợp lệ.");
+    }
+
+    // Câu lệnh SQL để cập nhật thông tin cán bộ
+    $sql = "UPDATE can_bo SET ten_can_bo = :ten_can_bo, ngay_den = :ngay_den, ngay_di = :ngay_di WHERE id = :id";
+    $stmt = $this->conn->prepare($sql);
+
+    // Gán giá trị cho các tham số
+    $stmt->bindParam(':ten_can_bo', $ten_can_bo, PDO::PARAM_STR);
+    $stmt->bindParam(':ngay_den', $ngay_den, PDO::PARAM_STR);
+    $stmt->bindParam(':ngay_di', $ngay_di, PDO::PARAM_STR);
+    $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+
+    // Thực thi câu lệnh
+    if ($stmt->execute()) {
+        return array("message" => "Cập nhật thông tin cán bộ thành công.");
+    } else {
+        return array("message" => "Có lỗi khi cập nhật thông tin cán bộ.");
+    }
 }
 
+
+public function datPhong($ten_can_bo, $ngay_den, $ngay_di, $room_id,$selected_canbo_id) {
+    // Kiểm tra xem có cán bộ nào trùng tên trong CSDL không
+    $can_bo_list = $this->checkCanBoExists($ten_can_bo);
+
+    if (empty($can_bo_list)) {
+        // Trường hợp 1: Không có cán bộ trong CSDL
+        // Thêm mới cán bộ vào CSDL
+        $canbo_id = $this->CreateCanBo($ten_can_bo, $ngay_den, $ngay_di);
+        $this->updatePhong($room_id, $canbo_id);
+        
+        return array(
+            "message" => "Thêm mới cán bộ và cập nhật phòng thành công.",
+            "canbo_id" => $canbo_id
+        );
+    } else {
+     // Trường hợp 3: Có nhiều cán bộ trùng tên
+if ($selected_canbo_id !== null) {
+    // Nếu người dùng đã chọn cán bộ từ danh sách
+    $canbo_id = $selected_canbo_id;
+
+    // Cập nhật thông tin cho cán bộ đã chọn
+    $this->updateCanBo($canbo_id, $ten_can_bo, $ngay_den, $ngay_di);
+    $this->updatePhong($room_id, $canbo_id);
+
+    return array(
+        "message" => "Thông tin cán bộ đã được cập nhật và đã cập nhật phòng.",
+        "canbo_id" => $canbo_id
+    );
+} else {
+
+            
+            // Thêm mới cán bộ vào CSDL
+            $canbo_id = $this->CreateCanBo($ten_can_bo, $ngay_den, $ngay_di);
+            $this->updatePhong($room_id, $canbo_id);
+
+            return array(
+                "message" => "Cán bộ không đúng, đã thêm mới cán bộ và cập nhật phòng thành công.",
+                "canbo_id" => $canbo_id
+            );
+        }
+    } 
+}
+
+
+
+
+
+
 public function traPhong($room_id) {
-    // Cập nhật thông tin phòng khi trả phòng
+    // Cập nhật trạng thái phòng và xóa can_bo_id
     $sql = "UPDATE phong_can_bo SET canbo_id = NULL, status = 'VACANT' WHERE id = :room_id";
     $stmt = $this->conn->prepare($sql);
     $stmt->bindParam(':room_id', $room_id);
     
-    // Trả về true nếu thành công
-    return $stmt->execute();
+    // Kiểm tra xem quá trình cập nhật có thành công hay không
+    if ($stmt->execute()) {
+        return array(
+            "message" => "Phòng đã được trả thành công.",
+            "room_id" => $room_id
+        );
+    } else {
+        return array(
+            "message" => "Có lỗi xảy ra khi trả phòng.",
+            "room_id" => $room_id
+        );
+    }
 }
+
 
 }
 ?>

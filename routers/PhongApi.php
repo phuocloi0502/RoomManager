@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && strpos($_SERVER['REQUEST_URI'], 'pho
     exit; // Thoát sau khi xử lý xong
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && strpos($_SERVER['REQUEST_URI'], 'tra-phong') !== false) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && strpos($_SERVER['REQUEST_URI'], 'phong/tra-phong') !== false) {
     header('Content-Type: application/json');
 
     // Lấy room_id từ query parameters
@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && strpos($_SERVER['REQUEST_URI'], 'tr
     exit; // Thoát sau khi xử lý xong
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && strpos($_SERVER['REQUEST_URI'], 'dat-phong') !== false) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && strpos($_SERVER['REQUEST_URI'], 'phong/dat-phong') !== false) {
     header('Content-Type: application/json');
 
     // Nhận dữ liệu từ body
@@ -105,13 +105,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && strpos($_SERVER['REQUEST_URI'], 'da
         $ngay_den = $data['ngay_den'];
         $ngay_di = $data['ngay_di'];
         $room_id = $data['room_id'];
-
+        $selected_canbo_id = $data['selected_canbo_id'];
         // Gọi hàm thêm hoặc cập nhật cán bộ và phòng
-        $response = $phong->themHoacCapNhatCanBoVaPhong($room_id, $ten_can_bo, $ngay_den, $ngay_di);
+        $response = $phong->datPhong( $ten_can_bo, $ngay_den, $ngay_di,$room_id,$selected_canbo_id);
         echo json_encode($response);
     } else {
         // Nếu không nhận được dữ liệu
         echo json_encode(array("message" => "Dữ liệu không hợp lệ."));
+    }
+    exit; // Thoát sau khi xử lý xong
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && strpos($_SERVER['REQUEST_URI'], 'phong/tim-kiem-can-bo') !== false) {
+    header('Content-Type: application/json');
+
+    // Nhận tham số tìm kiếm từ query string
+    $ten_can_bo = isset($_GET['ten_can_bo']) ? $_GET['ten_can_bo'] : '';
+
+    if ($ten_can_bo) {
+        // Gọi hàm kiểm tra cán bộ tồn tại
+        $can_bo_list = $phong->checkCanBoExists($ten_can_bo);
+
+        if (!empty($can_bo_list)) {
+            // Nếu có cán bộ phù hợp, trả về danh sách
+            echo json_encode(array(
+                "message" => "Danh sách cán bộ tìm thấy.",
+                "can_bo_list" => $can_bo_list
+            ));
+        } else {
+            // Không tìm thấy cán bộ
+            echo json_encode(array(
+                "message" => "Không tìm thấy cán bộ nào với tên đã cho."
+            ));
+        }
+    } else {
+        // Nếu không có tên cán bộ trong query string
+        echo json_encode(array(
+            "message" => "Vui lòng cung cấp tên cán bộ để tìm kiếm."
+        ));
     }
     exit; // Thoát sau khi xử lý xong
 }
